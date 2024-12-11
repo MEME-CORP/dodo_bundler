@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Solana Dodo_Bundler</title>
+  <style>
+    .error {
+      color: red;
+      display: none;
+    }
+    #step2, #step3 {
+      display: none;
+    }
+    pre {
+      background: #f9f9f9;
+      padding: 10px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <h1>Solana Dodo_Bundler Two-Step Process</h1>
+
+  <!-- Step 1: Ask for number of trader wallets and create them -->
+  <div id="step1">
+    <h2>Step 1: Create Wallets</h2>
+    <p>Enter the number of trader wallets to create (5-25):</p>
+    <input type="text" id="numTraders" value="5">
+    <br><br>
+    <button id="createWalletsBtn">Create Wallets</button>
+    <div id="walletInfo"></div>
+  </div>
+
+  <!-- Step 2: Show created wallets, ask user to fund dev/airdrop wallets -->
+  <div id="step2">
+    <h2>Wallets Created</h2>
+    <p>The following wallets have been created. Please fund the Dev and Airdrop wallets as indicated in the logs.</p>
+    <div id="createdWallets"></div>
+    <br>
+    <p>After funding the Dev and Airdrop wallets with the required amount, click "Next" to proceed.</p>
+    <button id="nextBtn">Next</button>
+  </div>
+
+  <!-- Step 3: Show the rest of the form for token details and run the script -->
+  <div id="step3">
+    <h2>Step 3: Token and Transaction Details</h2>
+    <form action="/run" method="POST" enctype="multipart/form-data" onsubmit="return validateForm()">
+      <label>Token Image (PNG only, 220x220px):</label><br>
+      <input type="file" name="tokenImage" id="tokenImage" accept="image/png" required><br>
+      <div id="imageError" class="error">Please upload a 220x220px PNG image.</div>
+      <br>
+
+      <label>Funding Amount per Trader Wallet (SOL):</label><br>
+      <input type="text" name="fundingAmount" value="0.01"><br><br>
+
+      <label>Token Name:</label><br>
+      <input type="text" name="tokenName" value="MyToken"><br><br>
+
+      <label>Token Symbol:</label><br>
+      <input type="text" name="tokenSymbol" value="MTK"><br><br>
+
+      <label>Token Description:</label><br>
+      <input type="text" name="tokenDescription" value="A test token"><br><br>
+
+      <label>Token Twitter URL:</label><br>
+      <input type="text" name="tokenTwitter" value="https://twitter.com/example"><br><br>
+
+      <label>Token Telegram URL:</label><br>
+      <input type="text" name="tokenTelegram" value="https://t.me/example"><br><br>
+
+      <label>Token Website URL:</label><br>
+      <input type="text" name="tokenWebsite" value="https://example.com"><br><br>
+
+      <label>Token Creation Amount (in SOL):</label><br>
+      <input type="text" name="createAmount" value="0.001"><br><br>
+
+      <label>Token Creation Slippage:</label><br>
+      <input type="text" name="createSlippage" value="10"><br><br>
+
+      <label>Token Creation Priority Fee (SOL):</label><br>
+      <input type="text" name="createPriorityFee" value="0.0005"><br><br>
+
+      <label>Buy Amount (in SOL):</label><br>
+      <input type="text" name="buyAmount" value="0.001"><br><br>
+
+      <label>Buy Slippage:</label><br>
+      <input type="text" name="buySlippage" value="10"><br><br>
+
+      <label>Buy Priority Fee (SOL):</label><br>
+      <input type="text" name="buyPriorityFee" value="0.0005"><br><br>
+
+      <!-- Hidden input for numTraders since we got it in step 1 -->
+      <input type="hidden" name="numTraders" id="hiddenNumTraders" value="5">
+
+      <input type="submit" value="Run">
+    </form>
+  </div>
+
+  <script>
+    const createWalletsBtn = document.getElementById('createWalletsBtn');
+    const numTradersInput = document.getElementById('numTraders');
+    const walletInfoDiv = document.getElementById('walletInfo');
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    const step3 = document.getElementById('step3');
+    const createdWalletsDiv = document.getElementById('createdWallets');
+    const nextBtn = document.getElementById('nextBtn');
+    const hiddenNumTraders = document.getElementById('hiddenNumTraders');
+
+    createWalletsBtn.addEventListener('click', async () => {
+      const numTraders = numTradersInput.value.trim();
+      if (!numTraders || isNaN(numTraders) || parseInt(numTraders) < 5 || parseInt(numTraders) > 25) {
+        alert("Number of trader wallets must be between 5 and 25");
+        return;
+      }
+
+      // Call the /createWallets endpoint
+      walletInfoDiv.textContent = "Creating wallets...";
+      const response = await fetch('/createWallets', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ numTraders: numTraders })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        walletInfoDiv.textContent = "Error: " + errorText;
+        return;
+      }
+
+      const data = await response.json();
+      walletInfoDiv.textContent = "";
+      createdWalletsDiv.innerHTML = `
+        <h3>Dev Wallet</h3>
+        <pre>Public Key: ${data.devWallet.publicKey}\nPrivate Key: ${data.devWallet.privateKey}</pre>
+        <h3>Airdrop Wallet</h3>
+        <pre>Public Key: ${data.airdropWallet.publicKey}\nPrivate Key: ${data.airdropWallet.privateKey}</pre>
+        <h3>Trader Wallets</h3>
+        <pre>${JSON.stringify(data.traderWallets, null, 2)}</pre>
+      `;
+
+      step1.style.display = 'none';
+      step2.style.display = 'block';
+      hiddenNumTraders.value = numTraders;
+    });
+
+    nextBtn.addEventListener('click', () => {
+      step2.style.display = 'none';
+      step3.style.display = 'block';
+    });
+
+    function validateForm() {
+      const fileInput = document.getElementById('tokenImage');
+      const file = fileInput.files[0];
+      const errorDiv = document.getElementById('imageError');
+
+      if (!file) {
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = 'Please select an image file.';
+        return false;
+      }
+
+      if (file.type !== 'image/png') {
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = 'Please upload a PNG file.';
+        return false;
+      }
+
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        img.onload = function() {
+          if (this.width !== 220 || this.height !== 220) {
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'Image must be exactly 220x220 pixels.';
+            resolve(false);
+          } else {
+            errorDiv.style.display = 'none';
+            resolve(true);
+          }
+        };
+      });
+    }
+  </script>
+</body>
+</html>
