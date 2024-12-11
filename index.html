@@ -2,19 +2,89 @@
 <html>
 <head>
   <title>Solana Dodo_Bundler</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    body {
+      margin: 0;
+      padding: 15px;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    
     .error {
       color: red;
       display: none;
     }
+    
     #step2, #step3 {
       display: none;
     }
+    
     pre {
       background: #f9f9f9;
       padding: 10px;
       white-space: pre-wrap;
       word-break: break-all;
+      max-width: 100%;
+      overflow-x: auto;
+    }
+
+    /* New responsive styles */
+    input[type="text"],
+    input[type="file"] {
+      width: 100%;
+      max-width: 400px;
+      padding: 8px;
+      margin: 5px 0;
+      box-sizing: border-box;
+    }
+
+    button, input[type="submit"] {
+      padding: 10px 20px;
+      margin: 10px 0;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    h1 {
+      font-size: 24px;
+      word-wrap: break-word;
+    }
+
+    h2 {
+      font-size: 20px;
+    }
+
+    h3 {
+      font-size: 18px;
+    }
+
+    form {
+      max-width: 100%;
+    }
+
+    label {
+      display: inline-block;
+      margin-top: 10px;
+    }
+
+    /* Media queries for larger screens */
+    @media (min-width: 768px) {
+      h1 {
+        font-size: 32px;
+      }
+
+      h2 {
+        font-size: 24px;
+      }
+
+      h3 {
+        font-size: 20px;
+      }
+
+      button, input[type="submit"] {
+        width: auto;
+      }
     }
   </style>
 </head>
