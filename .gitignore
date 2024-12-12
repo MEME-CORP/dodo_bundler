@@ -40,3 +40,4 @@ build/
 *.keypair
 
 scripts0.2/
+monoprompting/

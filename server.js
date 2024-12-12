@@ -102,10 +102,6 @@ app.get('/', (req, res) => {
 // Run the full script after user has funded the wallets and chosen token details
 app.post('/run', upload.single('tokenImage'), async (req, res) => {
   try {
-    if (fs.existsSync('./new-moon-face.png')) {
-      fs.unlinkSync('./new-moon-face.png');
-    }
-
     if (!req.file) {
       throw new Error('Token image is required');
     }
@@ -128,9 +124,6 @@ app.post('/run', upload.single('tokenImage'), async (req, res) => {
     };
 
     console.log("Received parameters for run:", params);
-
-    // Restore the uploaded file
-    fs.writeFileSync('./new-moon-face.png', fs.readFileSync(req.file.path));
 
     await runWithParams(params);
     res.send("Script executed successfully! Check console logs for details.");
