@@ -6,6 +6,7 @@ const multer = require('multer');
 const fs = require('fs');
 const { Keypair } = require('@solana/web3.js');
 const bs58 = require('bs58');
+const crypto = require('crypto');
 
 // Setup storage for image upload on /run
 const storage = multer.diskStorage({
@@ -42,6 +43,8 @@ function createWallet(type, id = null) {
   return { wallet, walletData };
 }
 
+const activeWalletSessions = new Map();
+
 app.post('/createWallets', (req, res) => {
   try {
     const numTraders = parseInt(req.body.numTraders);
@@ -49,24 +52,12 @@ app.post('/createWallets', (req, res) => {
       return res.status(400).send('Number of trader wallets must be between 5 and 25');
     }
 
-    const DB_DIR = path.join(__dirname, 'db');
-    if (!fs.existsSync(DB_DIR)) {
-      fs.mkdirSync(DB_DIR, { recursive: true });
-    }
+    // Generate session ID
+    const sessionId = crypto.randomBytes(16).toString('hex');
 
-    // Create dev wallet
+    // Create wallets as before...
     const { wallet: devWallet, walletData: devWalletData } = createWallet('dev_wallet');
-    fs.writeFileSync(
-      path.join(DB_DIR, 'dev_wallet.json'),
-      JSON.stringify(devWalletData, null, 2)
-    );
-
-    // Create airdrop wallet
     const { wallet: airdropWallet, walletData: airdropWalletData } = createWallet('airdrop_wallet');
-    fs.writeFileSync(
-      path.join(DB_DIR, 'airdrop_wallet.json'),
-      JSON.stringify(airdropWalletData, null, 2)
-    );
 
     // Create trader wallets
     const traderWallets = [];
@@ -76,13 +67,17 @@ app.post('/createWallets', (req, res) => {
       traderWallets.push(wallet);
       traderWalletsData.push(walletData);
     }
-    fs.writeFileSync(
-      path.join(DB_DIR, 'trader_wallets.json'),
-      JSON.stringify(traderWalletsData, null, 2)
-    );
 
-    // Return JSON with all wallets
+    // Store wallet data in memory with session ID
+    activeWalletSessions.set(sessionId, {
+      devWallet: devWalletData,
+      airdropWallet: airdropWalletData,
+      traderWallets: traderWalletsData
+    });
+
+    // Return JSON with all wallets and session ID
     res.json({
+      sessionId,
       devWallet: devWalletData,
       airdropWallet: airdropWalletData,
       traderWallets: traderWalletsData
@@ -106,6 +101,13 @@ app.post('/run', upload.single('tokenImage'), async (req, res) => {
       throw new Error('Token image is required');
     }
 
+    const sessionId = req.body.sessionId;
+    const walletData = activeWalletSessions.get(sessionId);
+    
+    if (!walletData) {
+      throw new Error('No wallet data found. Please create wallets first.');
+    }
+
     const params = {
       numTraders: req.body.numTraders,
       fundingAmount: req.body.fundingAmount,
@@ -120,12 +122,17 @@ app.post('/run', upload.single('tokenImage'), async (req, res) => {
       createPriorityFee: req.body.createPriorityFee,
       buyAmount: req.body.buyAmount,
       buySlippage: req.body.buySlippage,
-      buyPriorityFee: req.body.buyPriorityFee
+      buyPriorityFee: req.body.buyPriorityFee,
+      walletData: walletData // Pass the stored wallet data
     };
 
     console.log("Received parameters for run:", params);
 
     await runWithParams(params);
+    
+    // Clean up the session data after successful run
+    activeWalletSessions.delete(sessionId);
+    
     res.send("Script executed successfully! Check console logs for details.");
   } catch (error) {
     console.error(error);

@@ -167,6 +167,8 @@
   </div>
 
   <script>
+    let currentSessionId = null;
+
     const createWalletsBtn = document.getElementById('createWalletsBtn');
     const numTradersInput = document.getElementById('numTraders');
     const walletInfoDiv = document.getElementById('walletInfo');
@@ -199,6 +201,7 @@
       }
 
       const data = await response.json();
+      currentSessionId = data.sessionId;
       walletInfoDiv.textContent = "";
       createdWalletsDiv.innerHTML = `
         <h3>Dev Wallet</h3>
@@ -219,10 +222,23 @@
       step3.style.display = 'block';
     });
 
+    const form = document.querySelector('form');
+    const sessionIdInput = document.createElement('input');
+    sessionIdInput.type = 'hidden';
+    sessionIdInput.name = 'sessionId';
+    form.appendChild(sessionIdInput);
+
     function validateForm() {
+      sessionIdInput.value = currentSessionId;
+      
       const fileInput = document.getElementById('tokenImage');
       const file = fileInput.files[0];
       const errorDiv = document.getElementById('imageError');
+
+      if (!currentSessionId) {
+        alert('Please create wallets first');
+        return false;
+      }
 
       if (!file) {
         errorDiv.style.display = 'block';
