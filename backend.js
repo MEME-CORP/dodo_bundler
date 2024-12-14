@@ -196,38 +196,21 @@ async function runWithParams(params) {
       throw new Error('Number of trader wallets must be between 5 and 25');
     }
 
-    // Create wallets
-    console.log('\n=== Creating Wallets ===');
-    if (!fs.existsSync(DB_DIR)) {
-      fs.mkdirSync(DB_DIR, { recursive: true });
-    }
-
-    const { wallet: devWallet, walletData: devWalletData } = createWallet('dev_wallet');
-    fs.writeFileSync(
-      path.join(DB_DIR, 'dev_wallet.json'),
-      JSON.stringify(devWalletData, null, 2)
+    // Use the passed wallet data instead of creating new ones
+    console.log('\n=== Using Existing Wallets ===');
+    
+    // Convert wallet data back to Keypair objects
+    const devWallet = Keypair.fromSecretKey(bs58.decode(params.walletData.devWallet.privateKey));
+    const airdropWallet = Keypair.fromSecretKey(bs58.decode(params.walletData.airdropWallet.privateKey));
+    const traderWallets = params.walletData.traderWallets.map(walletData => 
+      Keypair.fromSecretKey(bs58.decode(walletData.privateKey))
     );
-    console.log('Dev wallet created:', devWallet.publicKey.toBase58());
 
-    const { wallet: airdropWallet, walletData: airdropWalletData } = createWallet('airdrop_wallet');
-    fs.writeFileSync(
-      path.join(DB_DIR, 'airdrop_wallet.json'),
-      JSON.stringify(airdropWalletData, null, 2)
-    );
-    console.log('Airdrop wallet created:', airdropWallet.publicKey.toBase58());
-
-    const traderWallets = [];
-    const traderWalletsData = [];
-    for (let i = 0; i < numTraders; i++) {
-      const { wallet, walletData } = createWallet(null, `trader_${i}`);
-      traderWallets.push(wallet);
-      traderWalletsData.push(walletData);
-      console.log(`Trader wallet ${i} created:`, wallet.publicKey.toBase58());
-    }
-    fs.writeFileSync(
-      path.join(DB_DIR, 'trader_wallets.json'),
-      JSON.stringify(traderWalletsData, null, 2)
-    );
+    console.log('Dev wallet:', devWallet.publicKey.toBase58());
+    console.log('Airdrop wallet:', airdropWallet.publicKey.toBase58());
+    traderWallets.forEach((wallet, i) => {
+      console.log(`Trader wallet ${i}:`, wallet.publicKey.toBase58());
+    });
 
     console.log('\n=== Current Wallet Balances ===');
     await checkWalletBalance(devWallet, 'Dev wallet');
